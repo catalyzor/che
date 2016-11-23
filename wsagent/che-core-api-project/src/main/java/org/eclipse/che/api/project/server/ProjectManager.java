@@ -58,7 +58,6 @@ import java.io.IOException;
 import java.nio.file.PathMatcher;
 import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ExecutorService;
@@ -328,14 +327,6 @@ public final class ProjectManager {
             for (NewProjectConfig projectConfig : sortedConfigList) {
                 RegisteredProject registeredProject;
                 final String pathToProject = projectConfig.getPath();
-                final String pathToParent = pathToProject.substring(0, pathToProject.lastIndexOf("/"));
-
-                if (!pathToParent.equals("/") && !isVirtualFileExist(pathToParent)) {
-                    //parent is not exist -> project config will be added with problem code = 10 (No project folder on file system)
-                    registeredProject = projectRegistry.putProject(projectConfig, null, true, false);
-                    projects.add(registeredProject);
-                    continue;
-                }
 
                 //creating project(by config or by importing source code)
                 try {
