@@ -329,7 +329,6 @@ public final class ProjectManager {
                 RegisteredProject registeredProject;
                 final String pathToProject = projectConfig.getPath();
                 final String pathToParent = pathToProject.substring(0, pathToProject.lastIndexOf("/"));
-                final List<Problem> problems = validateProjectTypeFor(projectConfig);
 
                 if (!pathToParent.equals("/") && !isVirtualFileExist(pathToParent)) {
                     //parent is not exist -> project config will be added with problem code = 10 (No project folder on file system)
@@ -365,7 +364,7 @@ public final class ProjectManager {
                 } else {
                     registeredProject = projectRegistry.putProject(projectConfig, null, true, false);
                 }
-                registeredProject.getProblems().addAll(problems);
+
                 projects.add(registeredProject);
             }
 
@@ -398,37 +397,6 @@ public final class ProjectManager {
                 projectConfig.setType(BaseProjectType.ID);
             }
         }
-    }
-
-    private List<Problem> validateProjectTypeFor(NewProjectConfig projectConfig) throws NotFoundException {
-        final List<Problem> problems = new ArrayList<>();
-        final String path = projectConfig.getPath();
-        final String projectTypeId = projectConfig.getType();
-
-        try {
-            projectTypeRegistry.getProjectType(projectTypeId);
-        } catch (NotFoundException e) {
-            projectConfig.setType(BaseProjectType.ID);
-            problems.add(new Problem(12, format("Primary type %s defined for %s is not registered. Base Project Type assigned.",
-                                                projectTypeId, path)));
-        }
-
-        final Iterator<String> mixinsIterator = projectConfig.getMixins().iterator();
-        while (mixinsIterator.hasNext()) {
-
-            final String mixin = mixinsIterator.next();
-            try {
-                final ProjectTypeDef mixinType = projectTypeRegistry.getProjectType(mixin);
-                if (!mixinType.isMixable()) {
-                    problems.add(new Problem(12, format("Project type %s is not allowable to be mixin. It not mixable. Skipped.", mixin)));
-                    mixinsIterator.remove();
-                }
-            } catch (NotFoundException e) {
-                problems.add(new Problem(12, format("Project type %s is not registered. Skipped.", mixin)));
-                mixinsIterator.remove();
-            }
-        }
-        return problems;
     }
 
     /**
