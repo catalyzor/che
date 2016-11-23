@@ -452,15 +452,26 @@ public class ProjectManagerWriteTest extends WsAgentTestBase {
     }
 
     @Test
-    public void testCreateProjectInvalidAttribute() throws Exception {
-        ProjectConfig pc = new NewProjectConfigImpl("/testCreateProjectInvalidAttributes", "pt2", null, "name", "descr", null, null, null);
+    public void testCreateProjectWithInvalidAttribute() throws Exception {
+        // SPECS:
+        // Project will be created with problem code = 13(Value for required attribute is not initialized)
+        // when required attribute is not initialized
+        final String path = "/testCreateProjectInvalidAttributes";
+        final String projectType = "pt2";
+        final NewProjectConfig config = new NewProjectConfigImpl(path, projectType, null, "name", "descr", null, null, null);
 
-        try {
-            pm.createProject(pc, null);
-            fail("ProjectTypeConstraintException should be thrown : pt-var2 attribute is mandatory");
-        } catch (ServerException e) {
-            //
-        }
+        pm.createProject(config, null);
+
+        RegisteredProject project = projectRegistry.getProject(path);
+        assertNotNull(project);
+        assertNotNull(pm.getProjectsRoot().getChild(path));
+        assertEquals(projectType, project.getType());
+
+        List<Problem> problems = project.getProblems();
+        assertNotNull(problems);
+        assertFalse(problems.isEmpty());
+        assertEquals(1, problems.size());
+        assertEquals(13, problems.get(0).code);
     }
 
 
@@ -523,33 +534,53 @@ public class ProjectManagerWriteTest extends WsAgentTestBase {
     @Test
     public void testInvalidPTProjectCreateFailed() throws Exception {
         // SPECS:
-        // If either primary or some mixin project type is not registered in PT registry
-        // project creation failed with NotFoundException
-
+        // project will be created as project of "blank" type
+        // with problem code 12(Primary type "someType" is not registered. Base Project Type assigned.)
+        // when primary project type is not registered in PT registry
+        final String path = "/testInvalidPTProjectCreateFailed";
         ProjectConfig pc =
-                new NewProjectConfigImpl("/testInvalidPTProjectCreateFailed", "invalid", null, "name", "descr", null, null, null);
+                new NewProjectConfigImpl(path, "invalid", null, "name", "descr", null, null, null);
 
-        try {
-            pm.createProject(pc, null);
-            fail("NotFoundException: Project Type not found: invalid");
-        } catch (ServerException e) {
-        }
+        pm.createProject(pc, null);
 
-        assertNull(projectRegistry.getProject("/testInvalidPTProjectCreateFailed"));
-        assertNull(pm.getProjectsRoot().getChild("/testInvalidPTProjectCreateFailed"));
-        //assertNull(projectRegistry.folder("/testInvalidPTProjectCreateFailed"));
+        RegisteredProject project = projectRegistry.getProject(path);
+        assertNotNull(project);
+        assertNotNull(pm.getProjectsRoot().getChild(path));
+        assertEquals(BaseProjectType.ID, project.getType());
 
-        // check mixin as well
+        List<Problem> problems = project.getProblems();
+        assertNotNull(problems);
+        assertFalse(problems.isEmpty());
+        assertEquals(1, problems.size());
+        assertEquals(12, problems.get(0).code);
+
+        //clean up
+        project.getBaseFolder().getVirtualFile().delete();
+        projectRegistry.removeProjects(path);
+        assertNull(projectRegistry.getProject(path));
+
+
+        // SPECS:
+        // project will be created without mixin project type and
+        // with problem code 12(Project type "someType" is not registered. Skipped.)
+        // when mixin project type is not registered in PT registry
         List<String> ms = new ArrayList<>();
         ms.add("invalid");
 
-        pc = new NewProjectConfigImpl("/testInvalidPTProjectCreateFailed", "blank", ms, "name", "descr", null, null, null);
+        pc = new NewProjectConfigImpl(path, "blank", ms, "name", "descr", null, null, null);
 
-        try {
-            pm.createProject(pc, null);
-            fail("NotFoundException: Project Type not found: invalid");
-        } catch (ServerException e) {
-        }
+        pm.createProject(pc, null);
+        project = projectRegistry.getProject(path);
+
+        assertNotNull(project);
+        assertNotNull(pm.getProjectsRoot().getChild(path));
+        assertTrue(project.getMixins().isEmpty());
+
+        problems = project.getProblems();
+        assertNotNull(problems);
+        assertFalse(problems.isEmpty());
+        assertEquals(1, problems.size());
+        assertEquals(12, problems.get(0).code);
     }
 
     @Test
@@ -637,28 +668,24 @@ public class ProjectManagerWriteTest extends WsAgentTestBase {
 
     @Test
     public void testUpdateProjectWithProvidedAttributes() throws Exception {
+        // SPECS: Project should be updated with problem code = 13 when value for required attribute is not initialized
+
         Map<String, List<String>> attributes = new HashMap<>();
         attributes.put("pt2-var2", new AttributeValue("test").getList());
 
         ProjectConfig pc = new NewProjectConfigImpl("/testUpdateProject", "pt2", null, "name", "descr", attributes, null, null);
-        RegisteredProject p = pm.createProject(pc, null);
-
-        // SPECS:
-        // If project type is updated with one required provided attributes
-        // those attributes should be provided before update
+        pm.createProject(pc, null);
 
         pc = new NewProjectConfigImpl("/testUpdateProject", "pt3", null, "updatedName", "descr", attributes, null, null);
 
-        try {
-            pm.updateProject(pc);
-            fail("ProjectTypeConstraintException: Value for required attribute is not initialized pt3:pt2-provided1 ");
-        } catch (ServerException e) {
-        }
 
+        RegisteredProject project = pm.updateProject(pc);
 
-        p.getBaseFolder().createFolder("file1");
-        p = pm.updateProject(pc);
-        assertEquals(new AttributeValue("pt2-provided1"), p.getAttributeEntries().get("pt2-provided1"));
+        final List<Problem> problems = project.getProblems();
+        assertNotNull(problems);
+        assertFalse(problems.isEmpty());
+        assertEquals(1, problems.size());
+        assertEquals(13, problems.get(0).code);
     }
 
 

@@ -114,8 +114,6 @@ public class RegisteredProject implements ProjectConfig {
      */
     private void initAttributes() {
 
-        Set<Attribute> invalidAttributes = new HashSet<>();
-
         // we take only defined attributes, others ignored
         for (Map.Entry<String, Attribute> entry : types.getAttributeDefs().entrySet()) {
             final Attribute definition = entry.getValue();
@@ -156,7 +154,6 @@ public class RegisteredProject implements ProjectConfig {
 
                 if (value.isEmpty() && variable.isRequired()) {
                     this.problems.add(new Problem(13, "Value for required attribute is not initialized " + variable.getId()));
-                    invalidAttributes.add(variable);
                     //throw new ProjectTypeConstraintException("Value for required attribute is not initialized " + variable.getId());
                 }
 
@@ -165,8 +162,6 @@ public class RegisteredProject implements ProjectConfig {
                 }
             }
         }
-
-        types.reset(invalidAttributes);
     }
 
     /**
