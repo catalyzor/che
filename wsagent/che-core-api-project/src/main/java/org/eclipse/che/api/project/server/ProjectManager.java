@@ -340,6 +340,7 @@ public final class ProjectManager {
                     }
                 } catch (Exception e) {
                     if (!isVirtualFileExist(pathToProject)) {//project folder is absent
+                        rollbackCreatingBatchProjects(projects);
                         throw e;
                     }
                 }
@@ -363,6 +364,20 @@ public final class ProjectManager {
 
         } finally {
             projectTreeChangesDetector.resume();
+        }
+    }
+
+    private void rollbackCreatingBatchProjects(List<RegisteredProject> projects) {
+        for (RegisteredProject project : projects) {
+            try {
+                final FolderEntry projectFolder = project.getBaseFolder();
+                if (projectFolder != null) {
+                    projectFolder.getVirtualFile().delete();
+                }
+                projectRegistry.removeProjects(project.getPath());
+            } catch (Exception e) {
+                LOG.warn(e.getLocalizedMessage());
+            }
         }
     }
 
