@@ -12,12 +12,10 @@ package org.eclipse.che.api.project.server;
 
 import com.google.common.io.ByteStreams;
 
-import org.apache.commons.io.IOUtils;
 import org.eclipse.che.api.core.ConflictException;
 import org.eclipse.che.api.core.ForbiddenException;
 import org.eclipse.che.api.core.NotFoundException;
 import org.eclipse.che.api.core.ServerException;
-import org.eclipse.che.api.core.model.project.ProjectConfig;
 import org.eclipse.che.api.core.model.project.SourceStorage;
 import org.eclipse.che.api.core.model.project.type.Attribute;
 import org.eclipse.che.api.core.notification.EventService;
@@ -53,12 +51,10 @@ import org.eclipse.che.api.vfs.impl.file.FileWatcherNotificationHandler;
 import org.eclipse.che.api.vfs.impl.file.LocalVirtualFileSystemProvider;
 import org.eclipse.che.api.vfs.impl.file.event.detectors.ProjectTreeChangesDetector;
 import org.eclipse.che.api.vfs.search.impl.FSLuceneSearcherProvider;
-import org.eclipse.che.api.workspace.shared.dto.NewProjectConfigDto;
 import org.eclipse.che.api.workspace.shared.dto.ProjectConfigDto;
 import org.eclipse.che.api.workspace.shared.dto.SourceStorageDto;
 import org.eclipse.che.api.workspace.shared.dto.WorkspaceConfigDto;
 import org.eclipse.che.api.workspace.shared.dto.WorkspaceDto;
-import org.eclipse.che.commons.json.JsonHelper;
 import org.eclipse.che.commons.lang.IoUtil;
 import org.eclipse.che.commons.lang.ws.rs.ExtMediaType;
 import org.eclipse.che.commons.subject.SubjectImpl;
@@ -89,7 +85,6 @@ import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
-import java.io.StringWriter;
 import java.net.URI;
 import java.nio.charset.Charset;
 import java.nio.file.PathMatcher;
@@ -114,6 +109,7 @@ import java.util.stream.IntStream;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipOutputStream;
 
+import static java.lang.String.format;
 import static java.util.Collections.singletonList;
 import static javax.ws.rs.HttpMethod.DELETE;
 import static javax.ws.rs.HttpMethod.GET;
@@ -123,6 +119,7 @@ import static javax.ws.rs.core.MediaType.APPLICATION_JSON;
 import static javax.ws.rs.core.MediaType.TEXT_PLAIN;
 import static org.eclipse.che.commons.lang.ws.rs.ExtMediaType.APPLICATION_ZIP;
 import static org.everrest.core.ApplicationContext.anApplicationContext;
+import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 import static org.mockito.Matchers.any;
 import static org.mockito.Mockito.mock;
@@ -681,10 +678,9 @@ public class ProjectServiceTest {
 
         ptRegistry.registerProjectType(pt);
 
-        ContainerResponse response =
-                launcher.service(GET, String.format("http://localhost:8080/api/project/estimate/%s?type=%s",
-                                                    "testEstimateProjectGood", "testEstimateProjectPT"),
-                                 "http://localhost:8080/api", null, null, null);
+        ContainerResponse response = launcher.service(GET, format("http://localhost:8080/api/project/estimate/%s?type=%s",
+                                                                  "testEstimateProjectGood", "testEstimateProjectPT"),
+                                                      "http://localhost:8080/api", null, null, null);
         assertEquals(response.getStatus(), 200, "Error: " + response.getEntity());
         //noinspection unchecked
         SourceEstimation result = (SourceEstimation)response.getEntity();
@@ -693,14 +689,15 @@ public class ProjectServiceTest {
         assertEquals(result.getAttributes().get("calculated_attribute").get(0), "checked");
 
         // if project not matched
-        response = launcher.service(GET, String.format("http://localhost:8080/api/project/estimate/%s?type=%s",
-                                                       "testEstimateProjectBad", "testEstimateProjectPT"),
+        response = launcher.service(GET, format("http://localhost:8080/api/project/estimate/%s?type=%s",
+                                                "testEstimateProjectBad", "testEstimateProjectPT"),
                                     "http://localhost:8080/api", null, null, null);
 
-        assertEquals(response.getStatus(), 409, "Error: " + response.getEntity());
-        String msg = JsonHelper.parseJson(response.getEntity().toString()).getElement("message").getStringValue();
-        assertEquals(errMessage, msg);
-
+        assertEquals(response.getStatus(), 200, "Error: " + response.getEntity());
+        //noinspection unchecked
+        result = (SourceEstimation)response.getEntity();
+        assertFalse(result.isMatched());
+        assertEquals(result.getAttributes().size(), 0);
     }
 
 
@@ -742,8 +739,8 @@ public class ProjectServiceTest {
         ptRegistry.registerProjectType(pt);
 
         ContainerResponse response =
-                launcher.service(GET, String.format("http://localhost:8080/api/project/resolve/%s",
-                                                    "testEstimateProjectGood"),
+                launcher.service(GET, format("http://localhost:8080/api/project/resolve/%s",
+                                             "testEstimateProjectGood"),
                                                     "http://localhost:8080/api", null, null, null);
         assertEquals(response.getStatus(), 200, "Error: " + response.getEntity());
         List<SourceEstimation> result = (List<SourceEstimation>) response.getEntity();
@@ -791,7 +788,7 @@ public class ProjectServiceTest {
                       "            \"type\": \"%s\"\n" +
                       "}";
 
-        byte[] b = String.format(json, importType).getBytes(Charset.defaultCharset());
+        byte[] b = format(json, importType).getBytes(Charset.defaultCharset());
         ContainerResponse response = launcher.service(POST,
                                                       "http://localhost:8080/api/project/import/new_project",
                                                       "http://localhost:8080/api", headers, b, null);
@@ -923,7 +920,7 @@ public class ProjectServiceTest {
     public void testCreateFolderInRoot() throws Exception {
         String folder = "my_folder";
         ContainerResponse response = launcher.service(POST,
-                                                      String.format("http://localhost:8080/api/project/folder/%s", folder),
+                                                      format("http://localhost:8080/api/project/folder/%s", folder),
                                                       "http://localhost:8080/api", null, null, null);
         assertEquals(response.getStatus(), 201, "Error: " + response.getEntity());
         ItemReference fileItem = (ItemReference)response.getEntity();
@@ -932,7 +929,7 @@ public class ProjectServiceTest {
         assertEquals(fileItem.getPath(), "/" + folder);
         validateFolderLinks(fileItem);
         assertEquals(response.getHttpHeaders().getFirst("Location"),
-                     URI.create(String.format("http://localhost:8080/api/project/children/%s", folder)));
+                     URI.create(format("http://localhost:8080/api/project/children/%s", folder)));
     }
 
     @Test
@@ -1173,9 +1170,9 @@ public class ProjectServiceTest {
         assertEquals(response.getStatus(), 201, "Error: " + response.getEntity());
         assertEquals(response.getHttpHeaders().getFirst("Location"),
                      URI.create(
-                             String.format("http://localhost:8080/api/project/children/my_project/a/b/c/%s", renamedFolder)));
+                             format("http://localhost:8080/api/project/children/my_project/a/b/c/%s", renamedFolder)));
         assertNotNull(myProject.getBaseFolder().getChild("a/b/test.txt"));
-        assertNotNull(myProject.getBaseFolder().getChild(String.format("a/b/c/%s/test.txt", renamedFolder)));
+        assertNotNull(myProject.getBaseFolder().getChild(format("a/b/c/%s/test.txt", renamedFolder)));
     }
 
     @Test
@@ -1211,11 +1208,11 @@ public class ProjectServiceTest {
         assertEquals(response.getStatus(), 201, "Error: " + response.getEntity());
         assertEquals(response.getHttpHeaders().getFirst("Location"),
                      URI.create(
-                             String.format("http://localhost:8080/api/project/children/my_project/a/b/c/%s", renamedFolder)));
+                             format("http://localhost:8080/api/project/children/my_project/a/b/c/%s", renamedFolder)));
         assertNotNull(myProject.getBaseFolder().getChild("a/b/test.txt"));
-        assertNotNull(myProject.getBaseFolder().getChild(String.format("a/b/c/%s/test.txt", renamedFolder)));
+        assertNotNull(myProject.getBaseFolder().getChild(format("a/b/c/%s/test.txt", renamedFolder)));
         assertEquals(myProject.getBaseFolder().getChild("a/b/test.txt").getName(),
-                     myProject.getBaseFolder().getChild(String.format("a/b/c/%s/%s", renamedFolder, originFileName)).getName());
+                     myProject.getBaseFolder().getChild(format("a/b/c/%s/%s", renamedFolder, originFileName)).getName());
     }
 
     @Test
@@ -1256,8 +1253,8 @@ public class ProjectServiceTest {
         assertEquals(response.getStatus(), 201, "Error: " + response.getEntity());
         assertEquals(response.getHttpHeaders().getFirst("Location"),
                      URI.create(
-                             String.format("http://localhost:8080/api/project/file/my_project/a/b/c/%s", destinationName)));
-        VirtualFileEntry theTargetFile = myProject.getBaseFolder().getChild(String.format("a/b/c/%s", destinationName));
+                             format("http://localhost:8080/api/project/file/my_project/a/b/c/%s", destinationName)));
+        VirtualFileEntry theTargetFile = myProject.getBaseFolder().getChild(format("a/b/c/%s", destinationName));
         assertNotNull(theTargetFile); // new
     }
 
@@ -1284,8 +1281,8 @@ public class ProjectServiceTest {
         assertEquals(response.getStatus(), 201, "Error: " + response.getEntity());
         assertEquals(response.getHttpHeaders().getFirst("Location"),
                      URI.create(
-                             String.format("http://localhost:8080/api/project/file/my_project/a/b/%s", destinationName)));
-        VirtualFileEntry theTargetFile = myProject.getBaseFolder().getChild(String.format("a/b/%s", destinationName));
+                             format("http://localhost:8080/api/project/file/my_project/a/b/%s", destinationName)));
+        VirtualFileEntry theTargetFile = myProject.getBaseFolder().getChild(format("a/b/%s", destinationName));
         assertNotNull(theTargetFile); // new
     }
 
@@ -1379,8 +1376,8 @@ public class ProjectServiceTest {
         assertEquals(response.getStatus(), 201, "Error: " + response.getEntity());
         assertEquals(response.getHttpHeaders().getFirst("Location"),
                      URI.create(
-                             String.format("http://localhost:8080/api/project/children/my_project/a/b/c/%s", renamedFolder)));
-        assertNotNull(myProject.getBaseFolder().getChild(String.format("a/b/c/%s/test.txt", renamedFolder)));
+                             format("http://localhost:8080/api/project/children/my_project/a/b/c/%s", renamedFolder)));
+        assertNotNull(myProject.getBaseFolder().getChild(format("a/b/c/%s/test.txt", renamedFolder)));
     }
 
     @Test
@@ -1406,8 +1403,8 @@ public class ProjectServiceTest {
         assertEquals(response.getStatus(), 201, "Error: " + response.getEntity());
         assertEquals(response.getHttpHeaders().getFirst("Location"),
                      URI.create(
-                             String.format("http://localhost:8080/api/project/children/my_project/a/%s", renamedFolder)));
-        assertNotNull(myProject.getBaseFolder().getChild(String.format("a/%s/test.txt", renamedFolder)));
+                             format("http://localhost:8080/api/project/children/my_project/a/%s", renamedFolder)));
+        assertNotNull(myProject.getBaseFolder().getChild(format("a/%s/test.txt", renamedFolder)));
     }
 
     @Test
@@ -1443,8 +1440,8 @@ public class ProjectServiceTest {
         assertEquals(response.getStatus(), 201, "Error: " + response.getEntity());
         assertEquals(response.getHttpHeaders().getFirst("Location"),
                      URI.create(
-                             String.format("http://localhost:8080/api/project/children/my_project/a/b/c/%s", renamedFolder)));
-        assertNotNull(myProject.getBaseFolder().getChild(String.format("a/b/c/%s/test.txt", renamedFolder)));
+                             format("http://localhost:8080/api/project/children/my_project/a/b/c/%s", renamedFolder)));
+        assertNotNull(myProject.getBaseFolder().getChild(format("a/b/c/%s/test.txt", renamedFolder)));
     }
 
     @Test
@@ -1462,7 +1459,7 @@ public class ProjectServiceTest {
         Map<String, List<String>> headers = new HashMap<>();
         headers.put(CONTENT_TYPE, singletonList(ExtMediaType.APPLICATION_ZIP));
         ContainerResponse response = launcher.service(POST,
-                                                      String.format("http://localhost:8080/api/project/import/my_project/a/b"),
+                                                      format("http://localhost:8080/api/project/import/my_project/a/b"),
                                                       "http://localhost:8080/api", headers, zip, null);
         assertEquals(response.getStatus(), 201, "Error: " + response.getEntity());
         assertEquals(response.getHttpHeaders().getFirst("Location"),

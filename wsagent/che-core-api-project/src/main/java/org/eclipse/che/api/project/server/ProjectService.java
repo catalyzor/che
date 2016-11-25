@@ -304,6 +304,7 @@ public class ProjectService extends Service {
         return DtoFactory.newDto(SourceEstimation.class)
                          .withType(projectType)
                          .withMatched(resolution.matched())
+                         .withResolution(resolution.getResolution())
                          .withAttributes(attributes);
     }
 

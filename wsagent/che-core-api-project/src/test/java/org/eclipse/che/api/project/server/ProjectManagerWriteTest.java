@@ -33,7 +33,6 @@ import org.eclipse.che.api.workspace.shared.dto.ProjectConfigDto;
 import org.eclipse.che.api.workspace.shared.dto.SourceStorageDto;
 import org.eclipse.che.dto.server.DtoFactory;
 import org.junit.Before;
-import org.junit.Ignore;
 import org.junit.Test;
 
 import java.io.ByteArrayInputStream;
@@ -528,11 +527,7 @@ public class ProjectManagerWriteTest extends WsAgentTestBase {
 
 
     @Test
-    public void testCreateProjectWithRequiredProvidedAttribute() throws Exception {
-        // SPECS:
-        // If project type has provided required attributes,
-        // respective CreateProjectHandler MUST be provided
-
+    public void testCreateProjectWithRequiredProvidedAttributeWhenGivenProjectTypeHasGenerator() throws Exception {
         final String path = "/testCreateProjectWithRequiredProvidedAttribute";
         final String projectTypeId = "pt3";
         final Map<String, List<String>> attributes = new HashMap<>();
@@ -548,19 +543,29 @@ public class ProjectManagerWriteTest extends WsAgentTestBase {
     }
 
     @Test
-    @Ignore //TODO what new behavior we should have for use case when we have not generator for given project type
-    public void testFailCreateProjectWithNoRequiredGenerator() throws Exception {
+    public void testCreateProjectWithRequiredProvidedAttributeWhenGivenProjectTypeHasNotGenerator() throws Exception {
         // SPECS:
-        // If there are no respective CreateProjectHandler ServerException will be thrown
+        // Project will be created with problem code = 13 (Value for required attribute is not initialized)
+        // when project type has provided required attributes
+        // but have not respective generator(CreateProjectHandler)
 
-        ProjectConfig pc =
-                new NewProjectConfigImpl("/testFailCreateProjectWithNoRequiredGenerator", "pt4", null, "name", "descr", null, null, null);
+        final String path = "/testCreateProjectWithRequiredProvidedAttribute";
+        final String projectTypeId = "pt4";
+        final ProjectConfig pc = new NewProjectConfigImpl(path, projectTypeId, null, "name", "descr", null, null, null);
 
-        try {
-            pm.createProject(pc, null);
-            fail("ProjectTypeConstraintException: Value for required attribute is not initialized pt4:pt4-provided1");
-        } catch (ServerException e) {
-        }
+        pm.createProject(pc, null);
+
+        final RegisteredProject project = projectRegistry.getProject(path);
+        final List<VirtualFileEntry> children = project.getBaseFolder().getChildren();
+        final List<Problem> problems = project.getProblems();
+        assertNotNull(project);
+        assertNotNull(pm.getProjectsRoot().getChild(path));
+        assertEquals(projectTypeId, project.getType());
+        assertTrue(children.isEmpty());
+        assertTrue(project.getAttributes().isEmpty());
+        assertFalse(problems.isEmpty());
+        assertEquals(1, problems.size());
+        assertEquals(13, problems.get(0).code);
     }
 
 
