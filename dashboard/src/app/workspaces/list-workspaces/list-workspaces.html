@@ -23,6 +23,7 @@
                      che-add-button-href="#/create-workspace"
                      che-delete-button-title="Delete"
                      che-on-delete="listWorkspacesCtrl.deleteSelectedWorkspaces()"
+                     che-filter-values="['Team', 'Team2', 'Plugin Team']"
                      che-hide-delete="listWorkspacesCtrl.isNoSelected"
                      che-hide-header="(listWorkspacesCtrl.userWorkspaces | filter:listWorkspacesCtrl.workspaceFilter).length === 0">
       <div flex="100"
