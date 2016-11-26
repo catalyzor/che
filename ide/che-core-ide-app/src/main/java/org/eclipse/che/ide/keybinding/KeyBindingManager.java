@@ -13,7 +13,7 @@ package org.eclipse.che.ide.keybinding;
 import elemental.dom.Element;
 import elemental.events.Event;
 import elemental.events.EventListener;
-
+import elemental.events.KeyboardEvent;
 import com.google.gwt.core.client.JavaScriptObject;
 import com.google.gwt.dom.client.AreaElement;
 import com.google.gwt.dom.client.InputElement;
@@ -73,7 +73,7 @@ public class KeyBindingManager implements KeyBindingAgent {
                 if (signalEvent == null) {
                     return;
                 }
-
+                preventDefaultBrowserAction((KeyboardEvent)event);
                 /*
                   Temporary solution to prevent calling actions if focus is in input element.
                   The problem in that, some actions, may be bound to Ctrl+C/X/V/Z or Delete so
@@ -106,6 +106,13 @@ public class KeyBindingManager implements KeyBindingAgent {
         } else {
             //webkit fires keydown events
             documentElement.addEventListener(Event.KEYDOWN, downListener, true);
+        }
+    }
+
+    private void preventDefaultBrowserAction(KeyboardEvent keyboardEvent) {
+        //prevent browser default action on Ctrl + S
+        if (keyboardEvent.isCtrlKey() && keyboardEvent.getKeyCode() == 83) {
+            keyboardEvent.preventDefault();
         }
     }
 

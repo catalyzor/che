@@ -652,7 +652,6 @@ public class StandardComponentInitializer {
         actionManager.registerAction(SPLIT_VERTICALLY, splitVerticallyAction);
         editorTabContextMenu.add(splitVerticallyAction);
 
-        actionManager.registerAction("noOpAction", new NoOpAction());
         actionManager.registerAction("signatureHelp", signatureHelpAction);
 
         DefaultActionGroup editorContextMenuGroup = new DefaultActionGroup(actionManager);
@@ -679,7 +678,6 @@ public class StandardComponentInitializer {
         keyBinding.getGlobal().addKey(new KeyBuilder().alt().charCode(KeyCodeMap.ARROW_LEFT).build(), "switchLeftTab");
         keyBinding.getGlobal().addKey(new KeyBuilder().alt().charCode(KeyCodeMap.ARROW_RIGHT).build(), "switchRightTab");
         keyBinding.getGlobal().addKey(new KeyBuilder().action().charCode('e').build(), "openRecentFiles");
-        keyBinding.getGlobal().addKey(new KeyBuilder().action().charCode('s').build(), "noOpAction");
         keyBinding.getGlobal().addKey(new KeyBuilder().charCode(KeyCodeMap.DELETE).build(), "deleteItem");
 
         keyBinding.getGlobal().addKey(new KeyBuilder().alt().charCode('N').build(), "newFile");
@@ -692,13 +690,6 @@ public class StandardComponentInitializer {
         } else {
             keyBinding.getGlobal().addKey(new KeyBuilder().alt().charCode('w').build(), "closeActiveEditor");
             keyBinding.getGlobal().addKey(new KeyBuilder().action().charCode('p').build(), "signatureHelp");
-        }
-    }
-
-    /** Action that does nothing. It's just for disabling (catching) browser's hot key. */
-    private class NoOpAction extends Action {
-        @Override
-        public void actionPerformed(ActionEvent e) {
         }
     }
 
